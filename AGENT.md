@@ -1,19 +1,56 @@
-# AGENT.md — Agent IA local pour contrôler un bot Minecraft
+# AGENT.md — Agent IA local Minecraft en survie
 
 ## Objectif du projet
 
-Créer un agent IA local capable de contrôler un personnage dans Minecraft Java Edition afin d’exécuter des tâches simples puis progressivement plus complexes.
+Créer un agent IA local capable de contrôler un personnage dans **Minecraft Java Edition en mode survie**.
 
-L’agent doit pouvoir :
+L'agent ne doit pas seulement exécuter des actions simples. Il doit être capable de :
 
 - comprendre une instruction en langage naturel ;
-- transformer cette instruction en plan d’actions structuré ;
-- exécuter uniquement des actions autorisées ;
-- contrôler un bot Minecraft via Mineflayer ;
-- utiliser un modèle IA local via Ollama ;
-- réaliser des tâches composées comme suivre le joueur, ramasser des items, miner des blocs, déposer des ressources, puis construire une maison à un endroit précis.
+- transformer cette instruction en objectif structuré ;
+- décomposer l'objectif en sous-tâches ;
+- estimer les ressources nécessaires ;
+- vérifier son inventaire ;
+- aller chercher les ressources manquantes ;
+- crafter les objets nécessaires ;
+- gérer sa sécurité, sa nourriture, ses outils et son chemin ;
+- revenir au chantier ;
+- exécuter la tâche finale, par exemple construire une maison à un endroit précis.
 
-Le projet doit être conçu de manière progressive, robuste et sécurisée.
+Le projet doit être conçu progressivement. L'agent ne doit pas être totalement libre. Il doit utiliser des actions prédéfinies, validées et sécurisées.
+
+---
+
+## Idée centrale
+
+En survie, une consigne comme :
+
+```text
+agent construis une petite maison ici
+```
+
+ne signifie pas seulement :
+
+```text
+poser des blocs
+```
+
+Elle signifie plutôt :
+
+```text
+1. comprendre le type de maison demandé ;
+2. choisir un modèle de maison ;
+3. déterminer les matériaux nécessaires ;
+4. vérifier l'inventaire ;
+5. identifier les ressources manquantes ;
+6. trouver où récupérer ces ressources ;
+7. fabriquer les blocs nécessaires ;
+8. nettoyer et préparer la zone ;
+9. construire la maison ;
+10. gérer les erreurs et interruptions.
+```
+
+L'agent doit donc être organisé comme un **planner de survie**, pas seulement comme un bot de construction.
 
 ---
 
@@ -28,26 +65,34 @@ Serveur conseillé :
 - serveur Vanilla local ;
 - ou serveur Paper/Spigot local si besoin de plugins.
 
-Éviter les serveurs publics pendant le développement.
+Pendant le développement, éviter les serveurs publics.
 
 ---
 
 ### Bot Minecraft
 
-Utiliser **Mineflayer** pour créer et contrôler un bot Minecraft.
+Utiliser **Mineflayer** pour créer et contrôler le bot.
 
-Dépendances principales :
+Dépendances de base :
 
 ```bash
 npm install mineflayer mineflayer-pathfinder axios dotenv
 ```
 
-Modules utiles :
+Dépendances utiles à ajouter progressivement :
 
-- `mineflayer` : connexion du bot et interaction avec Minecraft ;
+```bash
+npm install vec3 minecraft-data prismarine-block prismarine-item
+```
+
+Modules importants :
+
+- `mineflayer` : connexion et interactions Minecraft ;
 - `mineflayer-pathfinder` : déplacement automatique ;
+- `minecraft-data` : données sur les blocs, items, recettes, outils ;
+- `vec3` : manipulation des coordonnées ;
 - `axios` : appels HTTP vers Ollama ;
-- `dotenv` : configuration du serveur Minecraft.
+- `dotenv` : configuration.
 
 ---
 
@@ -55,53 +100,63 @@ Modules utiles :
 
 Utiliser **Ollama** pour faire tourner un modèle local.
 
-Modèles conseillés :
+Modèle conseillé :
 
 ```bash
 ollama run qwen2.5-coder:7b
 ```
 
-ou, pour une machine moins puissante :
+Alternative plus légère :
 
 ```bash
 ollama run llama3.2:3b
 ```
 
-Le modèle IA ne doit pas contrôler directement Minecraft. Il doit uniquement produire un plan JSON validé par le programme.
+Le modèle IA ne doit pas contrôler Minecraft directement. Il doit seulement produire des plans JSON validés par le programme.
 
 ---
 
-## Principe d’architecture
-
-L’agent doit être séparé en plusieurs couches.
+## Architecture globale
 
 ```text
 Joueur Minecraft
     ↓
-Message dans le chat : "agent construis une maison ici"
+Commande : "agent construis une maison ici"
     ↓
-Module chat / commande
+commandHandler.js
     ↓
 LLM local via Ollama
     ↓
-Plan JSON structuré
+Objectif JSON structuré
     ↓
-Validateur
+validator.js
     ↓
-Planner
+survivalPlanner.js
     ↓
-Actions autorisées
+Sous-objectifs : ressources, craft, sécurité, construction
+    ↓
+actions autorisées
     ↓
 Mineflayer
     ↓
-Bot Minecraft
+Bot Minecraft en survie
+```
+
+L'agent doit avoir deux niveaux de décision :
+
+```text
+Niveau 1 — LLM
+Comprend la demande, choisit une intention, produit un objectif structuré.
+
+Niveau 2 — Code déterministe
+Planifie, valide, collecte, craft, construit, gère les erreurs.
 ```
 
 ---
 
-## Règle fondamentale de sécurité
+## Règle de sécurité fondamentale
 
-Le modèle IA ne doit jamais exécuter de code libre.
+Le LLM ne doit jamais générer du code libre à exécuter.
 
 Interdit :
 
@@ -118,21 +173,24 @@ new Function(responseFromLLM)()
 Interdit :
 
 ```text
-Demander au LLM d’écrire du JavaScript puis l’exécuter automatiquement.
+Demander au LLM d'écrire du JavaScript puis l'exécuter automatiquement.
 ```
 
 Autorisé :
 
 ```json
 {
-  "plan": [
-    {"action": "come_to_player"},
-    {"action": "collect_nearby_items"}
-  ]
+  "goal": "build_house",
+  "location": "player_position",
+  "blueprint": "starter_house",
+  "constraints": {
+    "mode": "survival",
+    "allow_resource_gathering": true
+  }
 }
 ```
 
-Le programme doit vérifier que chaque action existe dans une liste blanche avant de l’exécuter.
+Le programme doit ensuite vérifier, découper et exécuter uniquement des actions connues.
 
 ---
 
@@ -143,37 +201,57 @@ minecraft-agent/
 ├── AGENT.md
 ├── package.json
 ├── .env
+├── memory.json
 ├── src/
 │   ├── bot.js
 │   ├── llm.js
 │   ├── commandHandler.js
-│   ├── planner.js
 │   ├── validator.js
+│   ├── survivalPlanner.js
+│   ├── taskQueue.js
 │   ├── memory.js
+│   ├── state/
+│   │   ├── worldState.js
+│   │   ├── inventoryState.js
+│   │   ├── dangerState.js
+│   │   └── botStatus.js
 │   ├── actions/
 │   │   ├── movement.js
 │   │   ├── inventory.js
 │   │   ├── mining.js
-│   │   ├── building.js
-│   │   └── crafting.js
+│   │   ├── collecting.js
+│   │   ├── crafting.js
+│   │   ├── smelting.js
+│   │   ├── combat.js
+│   │   ├── food.js
+│   │   └── building.js
+│   ├── survival/
+│   │   ├── resourcePlanner.js
+│   │   ├── resourceFinder.js
+│   │   ├── toolPlanner.js
+│   │   ├── craftingPlanner.js
+│   │   ├── safetyManager.js
+│   │   └── recoveryManager.js
 │   ├── builder/
 │   │   ├── blueprintLoader.js
 │   │   ├── houseGenerator.js
 │   │   ├── buildValidator.js
 │   │   ├── materialCounter.js
-│   │   └── structureBuilder.js
+│   │   ├── structureBuilder.js
+│   │   └── placementHelper.js
 │   └── blueprints/
 │       ├── starter_house.json
+│       ├── wood_house.json
 │       ├── storage_room.json
 │       └── animal_pen.json
-└── memory.json
+└── logs/
+    ├── tasks.log
+    └── errors.log
 ```
 
 ---
 
 ## Fichier `.env`
-
-Créer un fichier `.env` :
 
 ```env
 MC_HOST=localhost
@@ -187,7 +265,7 @@ OLLAMA_MODEL=qwen2.5-coder:7b
 
 ## Commandes Minecraft prévues
 
-Le bot doit réagir uniquement aux messages commençant par `agent`.
+Le bot doit uniquement réagir aux messages commençant par `agent`.
 
 Exemples :
 
@@ -196,38 +274,70 @@ agent viens ici
 agent suis-moi
 agent stop
 agent ramasse les items
-agent mine 5 blocs de chêne
-agent définis la maison ici
-agent va à la maison
+agent mine 5 blocs de bois
 agent construis une petite maison ici
 agent construis une maison en 120 64 -40
+agent prépare les ressources pour une maison
+agent reprends la construction
+agent dépose ton inventaire dans le coffre
+agent définis ce coffre comme coffre principal
+agent définis cet endroit comme base
 ```
 
 ---
 
-## Actions autorisées au début
+## Actions autorisées
 
-Créer une liste blanche d’actions.
-
-Exemple :
+Créer une liste blanche d'actions. Toute action inconnue doit être refusée.
 
 ```js
 const ALLOWED_ACTIONS = [
+  // Mouvement
   "come_to_player",
   "follow_player",
   "stop",
-  "collect_nearby_items",
-  "mine_block",
   "go_to_position",
-  "save_location",
   "go_to_saved_location",
+
+  // Mémoire
+  "save_location",
+  "save_chest_location",
+
+  // Inventaire
   "check_inventory",
+  "deposit_items",
+  "withdraw_items",
+  "collect_nearby_items",
+
+  // Survie
+  "check_health",
+  "eat_food",
+  "find_food",
+  "avoid_danger",
+  "return_to_base",
+
+  // Ressources
+  "find_resource",
+  "collect_resource",
+  "mine_block",
+  "chop_tree",
+  "dig_block",
+
+  // Outils et craft
+  "check_tool",
+  "craft_item",
+  "craft_tool",
+  "smelt_item",
+
+  // Construction
+  "check_build_area",
+  "clear_build_area",
+  "count_required_materials",
   "build_house",
-  "build_blueprint"
+  "build_blueprint",
+  "place_block"
 ];
 ```
-
-Toute action inconnue doit être refusée.
 
 ---
 
@@ -235,1033 +345,918 @@ Toute action inconnue doit être refusée.
 
 Le LLM doit répondre uniquement en JSON valide.
 
-Format général :
+Exemple pour une maison :
 
 ```json
 {
-  "plan": [
-    {
-      "action": "nom_action",
-      "params": {}
-    }
-  ]
+  "goal": "build_house",
+  "location": "player_position",
+  "blueprint": "starter_house",
+  "style": "simple_survival",
+  "constraints": {
+    "mode": "survival",
+    "allow_resource_gathering": true,
+    "allow_crafting": true,
+    "allow_tree_cutting": true,
+    "allow_mining": true,
+    "avoid_night_work": true,
+    "return_to_base_if_inventory_full": true
+  }
 }
+```
+
+Le LLM ne doit pas produire une liste de milliers de blocs à poser. Il doit produire une intention structurée. Le code se charge ensuite de générer le plan détaillé.
+
+---
+
+## État transmis au LLM
+
+Le LLM doit recevoir un état résumé, pas tout le monde Minecraft brut.
+
+Exemple :
+
+```json
+{
+  "bot": {
+    "position": {"x": 120, "y": 64, "z": -40},
+    "health": 20,
+    "food": 17,
+    "is_day": true,
+    "dimension": "overworld"
+  },
+  "player": {
+    "position": {"x": 123, "y": 64, "z": -42}
+  },
+  "inventory": [
+    {"name": "oak_log", "count": 12},
+    {"name": "stone_pickaxe", "count": 1},
+    {"name": "bread", "count": 3}
+  ],
+  "memory": {
+    "base": {"x": 100, "y": 64, "z": -20},
+    "main_chest": {"x": 102, "y": 64, "z": -22}
+  },
+  "nearby": {
+    "trees": true,
+    "water": false,
+    "hostile_mobs": false,
+    "dropped_items": true
+  }
+}
+```
+
+---
+
+# Partie survie : logique obligatoire
+
+## 1. L'agent doit estimer les ressources nécessaires
+
+Avant toute tâche complexe, l'agent doit compter les ressources.
+
+Pour une maison, utiliser :
+
+```text
+blueprint → liste de blocs → compteur de matériaux
 ```
 
 Exemple :
 
 ```json
 {
-  "plan": [
-    {
-      "action": "come_to_player",
-      "params": {}
-    }
-  ]
-}
-```
-
-Exemple avec construction :
-
-```json
-{
-  "plan": [
-    {
-      "action": "build_house",
-      "params": {
-        "origin": "player_position",
-        "blueprint": "starter_house",
-        "size": {
-          "width": 7,
-          "length": 9,
-          "height": 4
-        },
-        "materials": {
-          "walls": "oak_planks",
-          "floor": "oak_planks",
-          "roof": "stone_bricks",
-          "windows": "glass_pane"
-        }
-      }
-    }
-  ]
-}
-```
-
----
-
-## Prompt système conseillé pour le LLM
-
-Le prompt doit être strict.
-
-```text
-Tu contrôles un bot Minecraft.
-
-Tu dois transformer l’instruction du joueur en plan JSON.
-
-Tu dois répondre uniquement avec du JSON valide.
-Tu ne dois jamais écrire d’explication.
-Tu ne dois jamais écrire de code JavaScript.
-Tu ne dois jamais inventer d’action non autorisée.
-
-Actions autorisées :
-- come_to_player
-- follow_player
-- stop
-- collect_nearby_items
-- mine_block
-- go_to_position
-- save_location
-- go_to_saved_location
-- check_inventory
-- build_house
-- build_blueprint
-
-Format obligatoire :
-{
-  "plan": [
-    {
-      "action": "nom_action",
-      "params": {}
-    }
-  ]
-}
-
-Si la demande est impossible ou trop vague, réponds :
-{
-  "plan": [
-    {
-      "action": "stop",
-      "params": {
-        "reason": "demande impossible ou trop vague"
-      }
-    }
-  ]
-}
-```
-
----
-
-## Module `llm.js`
-
-Responsabilité : appeler Ollama et récupérer un plan JSON.
-
-Pseudo-code :
-
-```js
-async function askAgent(instruction, state) {
-  const prompt = buildPrompt(instruction, state);
-
-  const response = await axios.post(process.env.OLLAMA_URL, {
-    model: process.env.OLLAMA_MODEL,
-    stream: false,
-    messages: [
-      {
-        role: "user",
-        content: prompt
-      }
-    ]
-  });
-
-  const content = response.data.message.content;
-  return extractJson(content);
-}
-```
-
-La fonction `extractJson` doit :
-
-- trouver le premier `{` ;
-- trouver le dernier `}` ;
-- parser le JSON ;
-- renvoyer une erreur si le JSON est invalide.
-
----
-
-## Module `validator.js`
-
-Responsabilité : vérifier le plan avant exécution.
-
-Le validateur doit contrôler :
-
-- présence d’un tableau `plan` ;
-- action connue ;
-- paramètres valides ;
-- coordonnées raisonnables ;
-- taille de construction limitée ;
-- blocs autorisés ;
-- absence de code ;
-- absence d’action dangereuse.
-
-Exemple de limites :
-
-```js
-const LIMITS = {
-  maxPlanLength: 20,
-  maxBuildWidth: 20,
-  maxBuildLength: 20,
-  maxBuildHeight: 15,
-  maxMineCount: 64
-};
-```
-
----
-
-## Module `planner.js`
-
-Responsabilité : transformer un objectif haut niveau en étapes exécutables.
-
-Exemple :
-
-Instruction :
-
-```text
-agent construis une petite maison ici
-```
-
-Plan haut niveau :
-
-```json
-{
-  "action": "build_house",
-  "params": {
-    "origin": "player_position",
-    "blueprint": "starter_house"
-  }
-}
-```
-
-Le planner doit transformer cela en étapes :
-
-```text
-1. récupérer la position du joueur
-2. charger ou générer le blueprint
-3. vérifier que la zone est libre
-4. compter les matériaux nécessaires
-5. vérifier l’inventaire
-6. construire bloc par bloc
-7. signaler la fin de construction
-```
-
----
-
-## Module `memory.js`
-
-Responsabilité : sauvegarder des positions importantes.
-
-Fichier `memory.json` :
-
-```json
-{
-  "home": {
-    "x": 120,
-    "y": 64,
-    "z": -40
-  },
-  "chest": {
-    "x": 123,
-    "y": 64,
-    "z": -38
-  },
-  "farm": {
-    "x": 140,
-    "y": 64,
-    "z": -55
-  }
-}
-```
-
-Commandes possibles :
-
-```text
-agent définis home ici
-agent définis coffre ici
-agent va à home
-agent va au coffre
-```
-
----
-
-# Exemple d’approfondissement : construction d’une maison
-
-## Objectif
-
-Permettre au joueur d’écrire :
-
-```text
-agent construis une petite maison ici
-```
-
-ou :
-
-```text
-agent construis une maison en 120 64 -40
-```
-
-Le bot doit construire automatiquement une maison simple à l’endroit demandé.
-
----
-
-## Principe de construction
-
-Le LLM ne doit pas générer tous les blocs un par un.
-
-Le LLM doit seulement choisir :
-
-- le type de bâtiment ;
-- la taille ;
-- les matériaux ;
-- la position ;
-- éventuellement le style.
-
-Exemple de décision LLM :
-
-```json
-{
-  "plan": [
-    {
-      "action": "build_house",
-      "params": {
-        "origin": "player_position",
-        "blueprint": "starter_house",
-        "size": {
-          "width": 7,
-          "length": 9,
-          "height": 4
-        },
-        "materials": {
-          "walls": "oak_planks",
-          "floor": "oak_planks",
-          "roof": "stone_bricks",
-          "windows": "glass_pane"
-        }
-      }
-    }
-  ]
-}
-```
-
-Le code doit ensuite générer la liste exacte des blocs à poser.
-
----
-
-## Étapes détaillées pour construire une maison
-
-La fonction `buildHouse` doit suivre cet ordre :
-
-```text
-1. Déterminer l’origine de construction.
-2. Générer ou charger le blueprint.
-3. Convertir les coordonnées relatives en coordonnées absolues.
-4. Vérifier que la zone est libre.
-5. Vérifier que le terrain est suffisamment plat.
-6. Compter les matériaux nécessaires.
-7. Vérifier l’inventaire du bot.
-8. Si ressources manquantes, afficher la liste au joueur.
-9. Construire le sol.
-10. Construire les murs.
-11. Ajouter les fenêtres.
-12. Ajouter la porte.
-13. Construire le toit.
-14. Ajouter les torches ou détails.
-15. Annoncer la fin de construction.
-```
-
----
-
-## Génération procédurale d’une maison simple
-
-Créer un fichier :
-
-```text
-src/builder/houseGenerator.js
-```
-
-Fonction recommandée :
-
-```js
-function generateStarterHouse(options) {
-  const width = options.width || 7;
-  const length = options.length || 9;
-  const height = options.height || 4;
-
-  const materials = {
-    floor: options.materials?.floor || "oak_planks",
-    walls: options.materials?.walls || "oak_planks",
-    roof: options.materials?.roof || "stone_bricks",
-    windows: options.materials?.windows || "glass_pane",
-    door: options.materials?.door || "oak_door",
-    light: options.materials?.light || "torch"
-  };
-
-  const blocks = [];
-
-  // Sol
-  for (let x = 0; x < width; x++) {
-    for (let z = 0; z < length; z++) {
-      blocks.push({ x, y: 0, z, block: materials.floor });
-    }
-  }
-
-  // Murs
-  for (let y = 1; y <= height; y++) {
-    for (let x = 0; x < width; x++) {
-      blocks.push({ x, y, z: 0, block: materials.walls });
-      blocks.push({ x, y, z: length - 1, block: materials.walls });
-    }
-
-    for (let z = 1; z < length - 1; z++) {
-      blocks.push({ x: 0, y, z, block: materials.walls });
-      blocks.push({ x: width - 1, y, z, block: materials.walls });
-    }
-  }
-
-  // Porte sur la façade avant
-  removeBlock(blocks, Math.floor(width / 2), 1, 0);
-  removeBlock(blocks, Math.floor(width / 2), 2, 0);
-
-  blocks.push({
-    x: Math.floor(width / 2),
-    y: 1,
-    z: 0,
-    block: materials.door
-  });
-
-  // Fenêtres simples
-  replaceBlock(blocks, 1, 2, 0, materials.windows);
-  replaceBlock(blocks, width - 2, 2, 0, materials.windows);
-  replaceBlock(blocks, 0, 2, Math.floor(length / 2), materials.windows);
-  replaceBlock(blocks, width - 1, 2, Math.floor(length / 2), materials.windows);
-
-  // Toit plat avec débord
-  for (let x = -1; x <= width; x++) {
-    for (let z = -1; z <= length; z++) {
-      blocks.push({ x, y: height + 1, z, block: materials.roof });
-    }
-  }
-
-  // Torches intérieures simples
-  blocks.push({ x: 1, y: 2, z: 1, block: materials.light });
-  blocks.push({ x: width - 2, y: 2, z: length - 2, block: materials.light });
-
-  return blocks;
-}
-
-function removeBlock(blocks, x, y, z) {
-  const index = blocks.findIndex(
-    b => b.x === x && b.y === y && b.z === z
-  );
-
-  if (index !== -1) {
-    blocks.splice(index, 1);
-  }
-}
-
-function replaceBlock(blocks, x, y, z, block) {
-  removeBlock(blocks, x, y, z);
-  blocks.push({ x, y, z, block });
-}
-
-module.exports = { generateStarterHouse };
-```
-
----
-
-## Format d’un blueprint JSON
-
-Créer un dossier :
-
-```text
-src/blueprints/
-```
-
-Exemple :
-
-```json
-{
-  "name": "starter_house",
-  "size": {
-    "width": 7,
-    "length": 9,
-    "height": 5
-  },
-  "blocks": [
-    {
-      "x": 0,
-      "y": 0,
-      "z": 0,
-      "block": "oak_planks"
-    },
-    {
-      "x": 1,
-      "y": 0,
-      "z": 0,
-      "block": "oak_planks"
-    }
-  ]
-}
-```
-
-Les coordonnées sont relatives à l’origine de construction.
-
----
-
-## Conversion des coordonnées
-
-Si l’origine est :
-
-```json
-{
-  "x": 120,
-  "y": 64,
-  "z": -40
-}
-```
-
-Et que le blueprint contient :
-
-```json
-{
-  "x": 2,
-  "y": 1,
-  "z": 3,
-  "block": "oak_planks"
-}
-```
-
-Alors le bloc doit être placé en :
-
-```json
-{
-  "x": 122,
-  "y": 65,
-  "z": -37
-}
-```
-
----
-
-## Validation de la zone de construction
-
-Avant de construire, vérifier :
-
-- que la zone ne contient pas déjà une structure importante ;
-- que le terrain n’est pas trop irrégulier ;
-- que le bot peut accéder à la zone ;
-- que la taille de la maison respecte les limites ;
-- que les blocs sont autorisés ;
-- que l’origine est correcte.
-
-Pseudo-code :
-
-```js
-function validateBuildArea(bot, origin, size) {
-  if (size.width > 20 || size.length > 20 || size.height > 15) {
-    throw new Error("Maison trop grande");
-  }
-
-  // Vérifier les blocs de la zone
-  // Refuser si présence de coffres, fours, lits, etc.
-  // Accepter air, herbe, fleurs, hautes herbes si clear_area est prévu.
-}
-```
-
-Blocs à ne pas détruire automatiquement :
-
-```js
-const PROTECTED_BLOCKS = [
-  "chest",
-  "trapped_chest",
-  "furnace",
-  "blast_furnace",
-  "smoker",
-  "bed",
-  "crafting_table",
-  "enchanting_table",
-  "anvil",
-  "barrel"
-];
-```
-
----
-
-## Calcul des matériaux nécessaires
-
-Avant de construire, compter les blocs du blueprint.
-
-```js
-function countRequiredMaterials(blocks) {
-  const requirements = {};
-
-  for (const b of blocks) {
-    requirements[b.block] = (requirements[b.block] || 0) + 1;
-  }
-
-  return requirements;
-}
-```
-
-Exemple de sortie :
-
-```json
-{
-  "oak_planks": 168,
-  "stone_bricks": 99,
-  "glass_pane": 4,
+  "oak_planks": 180,
   "oak_door": 1,
-  "torch": 2
+  "glass_pane": 8,
+  "torch": 4,
+  "cobblestone": 32
 }
 ```
 
----
+Puis comparer avec l'inventaire.
 
-## Vérification de l’inventaire
-
-Comparer les ressources nécessaires avec l’inventaire du bot.
-
-```js
-function checkInventory(bot, requirements) {
-  const inventory = {};
-
-  for (const item of bot.inventory.items()) {
-    inventory[item.name] = (inventory[item.name] || 0) + item.count;
-  }
-
-  const missing = {};
-
-  for (const [item, requiredCount] of Object.entries(requirements)) {
-    const available = inventory[item] || 0;
-
-    if (available < requiredCount) {
-      missing[item] = requiredCount - available;
-    }
-  }
-
-  return missing;
-}
-```
-
-Si des matériaux manquent, le bot doit écrire dans le chat :
-
-```text
-Il me manque : 42 oak_planks, 8 glass_pane, 1 oak_door.
-```
-
-Ne pas commencer la construction si les ressources manquent.
-
----
-
-## Ordre de construction
-
-Construire dans cet ordre :
-
-```text
-1. sol
-2. murs
-3. vitres
-4. porte
-5. toit
-6. torches et détails
-```
-
-Règle simple : trier les blocs par hauteur croissante.
-
-```js
-blocks.sort((a, b) => a.y - b.y);
-```
-
-Pour une construction plus propre, ajouter un champ `phase` :
+Exemple de résultat :
 
 ```json
 {
-  "x": 0,
-  "y": 0,
-  "z": 0,
-  "block": "oak_planks",
-  "phase": "floor"
+  "missing": {
+    "oak_planks": 132,
+    "glass_pane": 8,
+    "torch": 4
+  }
 }
 ```
 
-Puis construire par phase.
-
 ---
 
-## Placement des blocs
+## 2. L'agent doit connaître les équivalences de ressources
 
-Dans Minecraft, un bloc ne peut pas toujours être posé directement dans le vide. Il faut souvent un bloc adjacent comme support.
+En survie, il faut convertir les ressources brutes en blocs finaux.
 
-La fonction `placeBlockAt` doit :
+Exemples :
 
 ```text
-1. trouver l’item correspondant dans l’inventaire ;
-2. équiper l’item ;
-3. trouver un bloc adjacent utilisable comme support ;
-4. se déplacer près du point de placement ;
-5. poser le bloc ;
-6. vérifier que le bloc a bien été posé.
+1 oak_log → 4 oak_planks
+6 oak_planks → 3 oak_door
+1 coal + 1 stick → 4 torch
+2 oak_planks → 4 stick
+sand → smelting → glass
+6 glass → 16 glass_pane
+cobblestone → four / outils / blocs de construction
 ```
 
-Pseudo-code :
+Il faut créer un module `resourcePlanner.js` capable de répondre :
+
+```text
+Pour obtenir 180 oak_planks, il faut 45 oak_log.
+Pour obtenir 8 glass_pane, il faut 6 glass, donc 6 sand + cuisson.
+Pour obtenir 4 torches, il faut 1 coal et 1 stick.
+```
+
+---
+
+## 3. L'agent doit savoir aller chercher les ressources
+
+Créer un module `resourceFinder.js`.
+
+Il doit savoir trouver :
+
+```text
+oak_log       → chercher un arbre proche
+birch_log     → chercher un bouleau proche
+cobblestone   → miner de la stone avec une pioche
+sand          → chercher sable près de l'eau ou biome adapté
+coal          → miner charbon visible ou utiliser charcoal
+food          → inventaire, animaux, cultures, coffre
+wool          → moutons ou coffre
+```
+
+Important : pour une première version, ne pas chercher trop loin. Définir une limite :
 
 ```js
-async function placeBlockAt(bot, targetPos, blockName) {
-  const item = bot.inventory.items().find(item => item.name === blockName);
+const MAX_SEARCH_RADIUS = 64;
+const MAX_RESOURCE_ATTEMPTS = 3;
+```
 
-  if (!item) {
-    throw new Error(`Bloc manquant : ${blockName}`);
-  }
+Si la ressource n'est pas trouvée, le bot doit demander de l'aide ou utiliser une alternative.
 
-  await bot.equip(item, "hand");
+Exemple :
 
-  const reference = findReferenceBlock(bot, targetPos);
+```text
+Je n'ai pas trouvé de charbon proche. Je peux fabriquer du charbon de bois si j'ai du bois et un four.
+```
 
-  if (!reference) {
-    throw new Error(`Aucun bloc de support pour ${targetPos}`);
-  }
+---
 
-  await moveNear(bot, targetPos);
+## 4. L'agent doit gérer les alternatives
 
-  const faceVector = targetPos.minus(reference.position);
-  await bot.placeBlock(reference, faceVector);
+Pour ne pas bloquer, l'agent doit avoir des ressources alternatives.
+
+Exemples :
+
+```text
+Torches :
+- priorité : coal + stick
+- alternative : charcoal + stick
+
+Murs :
+- priorité : oak_planks
+- alternative : birch_planks, spruce_planks, cobblestone
+
+Fenêtres :
+- priorité : glass_pane
+- alternative : laisser des ouvertures sans vitre
+
+Toit :
+- priorité : cobblestone ou oak_stairs
+- alternative v1 : toit plat en planks
+```
+
+Créer une table :
+
+```js
+const MATERIAL_ALTERNATIVES = {
+  oak_planks: ["birch_planks", "spruce_planks", "cobblestone"],
+  coal: ["charcoal"],
+  glass_pane: ["glass", "air"],
+  oak_door: ["birch_door", "spruce_door"]
+};
+```
+
+---
+
+## 5. L'agent doit gérer les outils
+
+Avant de miner ou couper, il doit vérifier les outils.
+
+Exemples :
+
+```text
+Pour couper du bois : axe recommandé, main autorisée si petite quantité.
+Pour miner de la stone : pioche obligatoire.
+Pour miner du charbon : pioche obligatoire.
+Pour miner du fer : pioche en pierre minimum.
+```
+
+Créer un module `toolPlanner.js`.
+
+Pseudo-logique :
+
+```text
+Si besoin de cobblestone :
+  vérifier pioche.
+  si pas de pioche :
+    vérifier sticks + planks.
+    crafter wooden_pickaxe.
+    miner 3 cobblestone.
+    crafter stone_pickaxe.
+```
+
+---
+
+## 6. L'agent doit gérer le crafting
+
+Créer un module `craftingPlanner.js`.
+
+Le bot doit savoir crafter :
+
+```text
+oak_planks
+stick
+crafting_table
+wooden_pickaxe
+stone_pickaxe
+stone_axe
+oak_door
+torch
+furnace
+glass
+glass_pane
+```
+
+Principe :
+
+```text
+1. vérifier si l'item existe déjà dans l'inventaire ;
+2. vérifier les ingrédients ;
+3. si besoin, poser ou trouver une crafting table ;
+4. crafter ;
+5. vérifier le résultat.
+```
+
+Ne pas essayer de tout crafter dès le début. Commencer avec :
+
+```text
+oak_planks
+stick
+crafting_table
+wooden_pickaxe
+stone_pickaxe
+torch
+oak_door
+```
+
+---
+
+## 7. L'agent doit gérer la nourriture et la sécurité
+
+Avant toute tâche longue, vérifier :
+
+```text
+health >= 12
+food >= 10
+pas de mobs hostiles proches
+pas de lave immédiate
+pas de chute dangereuse
+```
+
+Créer un module `safetyManager.js`.
+
+Règles simples :
+
+```text
+Si health < 10 : revenir à la base ou s'éloigner.
+Si food < 8 : manger si possible.
+Si food < 6 et pas de nourriture : arrêter la tâche et demander de l'aide.
+Si hostile mob proche : fuir vers la base ou vers le joueur.
+Si nuit + tâche extérieure longue : demander confirmation ou attendre le jour.
+```
+
+Pour la v1, il vaut mieux que le bot soit prudent.
+
+---
+
+## 8. L'agent doit gérer l'inventaire
+
+En survie, l'inventaire peut être plein.
+
+Créer des fonctions :
+
+```text
+countInventory(itemName)
+hasItem(itemName, count)
+getMissingItems(requirements)
+depositNonEssentialItems()
+withdrawRequiredItems(requirements)
+isInventoryFull()
+```
+
+Règle recommandée :
+
+```text
+Avant une tâche longue :
+- garder nourriture ;
+- garder outils ;
+- garder blocs nécessaires ;
+- déposer le reste dans le coffre principal.
+```
+
+Il faut donc pouvoir définir un coffre principal :
+
+```text
+agent définis ce coffre comme coffre principal
+```
+
+Stocker dans `memory.json` :
+
+```json
+{
+  "main_chest": {"x": 102, "y": 64, "z": -22},
+  "base": {"x": 100, "y": 64, "z": -20}
 }
 ```
 
 ---
 
-## Gestion des erreurs pendant la construction
+## 9. L'agent doit reprendre après un échec
 
-Le builder doit savoir s’arrêter proprement.
+Les tâches longues doivent être sauvegardées.
 
-Cas à gérer :
+Créer `taskQueue.js`.
 
-- bloc manquant ;
-- chemin impossible ;
-- mob qui bloque ;
-- chute du bot ;
-- bloc impossible à poser ;
-- zone devenue occupée ;
-- joueur demande `agent stop`.
+Une tâche doit avoir :
 
-Prévoir un état global :
-
-```js
-const buildState = {
-  running: false,
-  paused: false,
-  currentTask: null,
-  currentBlockIndex: 0
-};
+```json
+{
+  "id": "task_001",
+  "goal": "build_house",
+  "status": "running",
+  "current_step": 4,
+  "origin": {"x": 120, "y": 64, "z": -40},
+  "blueprint": "starter_house",
+  "remaining_materials": {
+    "oak_planks": 32
+  }
+}
 ```
 
 Commandes utiles :
 
 ```text
 agent stop
-agent pause
-agent resume
-agent status
+agent reprends
+agent statut
+agent annule la tâche
 ```
 
 ---
 
-## Comportement attendu pour la maison
+# Exemple d'approfondissement : construire une maison en survie
 
-Quand le joueur dit :
+## Objectif utilisateur
 
 ```text
 agent construis une petite maison ici
 ```
 
-Le bot doit répondre :
+## Résultat attendu
+
+L'agent doit :
 
 ```text
-Je prépare une maison starter_house en X Y Z.
-```
-
-Puis :
-
-```text
-Zone vérifiée : OK.
-```
-
-Puis, si ressources manquantes :
-
-```text
-Il me manque : 120 oak_planks, 4 glass_pane, 1 oak_door.
-```
-
-Sinon :
-
-```text
-Construction lancée.
-```
-
-À la fin :
-
-```text
-Maison terminée.
+1. identifier la position du joueur ;
+2. choisir un blueprint simple ;
+3. vérifier que la zone est assez plate et libre ;
+4. calculer les matériaux ;
+5. vérifier l'inventaire et le coffre principal ;
+6. aller chercher les ressources manquantes ;
+7. crafter les blocs nécessaires ;
+8. revenir au chantier ;
+9. construire la maison ;
+10. poser porte, torches et fenêtres si possible ;
+11. signaler clairement ce qui a été fait ou ce qui manque.
 ```
 
 ---
 
-## Gestion du mode créatif et du mode survie
+## Blueprint conseillé pour la v1
 
-### Mode créatif
-
-Le mode créatif est plus simple pour développer.
-
-Le bot peut construire directement sans se soucier des ressources.
-
-Utiliser ce mode pour tester :
-
-- génération du blueprint ;
-- placement des blocs ;
-- navigation ;
-- orientation ;
-- robustesse du builder.
-
----
-
-### Mode survie
-
-En survie, il faut :
-
-- vérifier l’inventaire ;
-- collecter les ressources ;
-- crafter si nécessaire ;
-- revenir à la zone ;
-- construire.
-
-Ne pas commencer par la survie complète. Commencer par le mode créatif ou par un inventaire déjà rempli.
-
----
-
-## Roadmap conseillée
-
-### Étape 1 — Bot simple
-
-Objectif : connecter le bot au serveur Minecraft.
-
-À faire :
-
-- créer `bot.js` ;
-- connecter Mineflayer ;
-- lire le chat ;
-- répondre à `agent ping`.
-
----
-
-### Étape 2 — Déplacement
-
-Objectif : faire venir le bot vers le joueur.
-
-Actions à coder :
-
-- `come_to_player` ;
-- `follow_player` ;
-- `stop`.
-
----
-
-### Étape 3 — LLM local
-
-Objectif : transformer une phrase en plan JSON.
-
-À faire :
-
-- installer Ollama ;
-- créer `llm.js` ;
-- forcer la réponse JSON ;
-- valider les actions.
-
----
-
-### Étape 4 — Actions Minecraft simples
-
-Objectif : rendre le bot utile.
-
-Actions :
-
-- ramasser les items proches ;
-- miner un bloc précis ;
-- aller à une position ;
-- sauvegarder des positions.
-
----
-
-### Étape 5 — Mémoire
-
-Objectif : mémoriser des lieux.
-
-Commandes :
+Maison très simple :
 
 ```text
-agent définis home ici
-agent va à home
-agent définis coffre ici
-agent va au coffre
+Taille : 7 x 9
+Hauteur des murs : 4
+Toit : plat
+Matériaux :
+- sol : oak_planks
+- murs : oak_planks
+- toit : oak_planks ou cobblestone
+- porte : oak_door
+- fenêtres : glass_pane facultatif
+- lumière : torches facultatif
+```
+
+Pourquoi ce choix :
+
+```text
+- facile à construire ;
+- peu de blocs orientés ;
+- pas besoin d'escaliers ;
+- peu de risques de bug ;
+- ressources faciles à obtenir.
 ```
 
 ---
 
-### Étape 6 — Construction simple
+## Estimation approximative des ressources
 
-Objectif : générer une maison simple et la construire.
-
-À faire :
-
-- créer `houseGenerator.js` ;
-- créer `materialCounter.js` ;
-- créer `buildValidator.js` ;
-- créer `structureBuilder.js` ;
-- coder `build_house`.
-
----
-
-### Étape 7 — Blueprints
-
-Objectif : construire des structures prédéfinies.
-
-À faire :
-
-- créer des fichiers JSON de structures ;
-- charger un blueprint ;
-- construire selon les coordonnées relatives.
-
----
-
-### Étape 8 — Structures avancées
-
-Ajouter :
-
-- toit en escaliers ;
-- orientation de la maison ;
-- fenêtres plus propres ;
-- coffre intérieur ;
-- lit ;
-- ferme automatique ;
-- enclos à animaux ;
-- salle de stockage.
-
----
-
-## Bonnes pratiques
-
-Toujours faire simple au début.
-
-Ne pas chercher à créer un agent totalement autonome immédiatement.
-
-Priorité :
-
-```text
-1. fiabilité
-2. sécurité
-3. actions simples
-4. tâches composées
-5. créativité
-```
-
-Le LLM doit être utilisé pour comprendre la demande et choisir une stratégie, pas pour remplacer tout le code.
-
-Le code doit rester déterministe pour les actions critiques :
-
-- déplacement ;
-- minage ;
-- inventaire ;
-- placement de blocs ;
-- construction.
-
----
-
-## Résumé de l’architecture finale
-
-```text
-LLM local avec Ollama
-    ↓
-Comprend l’ordre du joueur
-    ↓
-Produit un plan JSON
-    ↓
-Validator refuse les actions invalides
-    ↓
-Planner transforme l’objectif en sous-étapes
-    ↓
-Actions Mineflayer exécutées une par une
-    ↓
-Builder construit les structures avec des blueprints
-    ↓
-Bot Minecraft agit dans le monde
-```
-
----
-
-## Exemple final attendu
-
-Commande joueur :
-
-```text
-agent construis une petite maison ici
-```
-
-Réponse LLM :
+Pour une maison 7 x 9 x 4 :
 
 ```json
 {
-  "plan": [
+  "oak_planks": 180,
+  "oak_door": 1,
+  "torch": 4,
+  "glass_pane": 8
+}
+```
+
+Conversion approximative :
+
+```text
+180 oak_planks → 45 oak_log
+1 oak_door → 6 oak_planks → 2 oak_log environ
+4 torches → 1 coal ou charcoal + 1 stick
+8 glass_pane → 6 sand + cuisson en glass
+```
+
+Version minimale possible si l'agent manque de ressources :
+
+```text
+- maison sans vitres ;
+- torches seulement si charbon disponible ;
+- toit en planches ;
+- porte obligatoire si possible.
+```
+
+---
+
+## Plan JSON interne généré par le planner
+
+Le LLM peut produire :
+
+```json
+{
+  "goal": "build_house",
+  "location": "player_position",
+  "blueprint": "starter_house",
+  "priority": "complete_basic_shelter",
+  "constraints": {
+    "survival": true,
+    "gather_missing_resources": true,
+    "use_alternatives": true,
+    "skip_optional_decoration_if_missing": true
+  }
+}
+```
+
+Le `survivalPlanner.js` transforme ensuite cela en étapes :
+
+```json
+{
+  "steps": [
+    {"action": "save_build_origin"},
+    {"action": "load_blueprint", "name": "starter_house"},
+    {"action": "check_build_area"},
+    {"action": "count_required_materials"},
+    {"action": "check_inventory_and_chest"},
+    {"action": "plan_missing_resources"},
+    {"action": "gather_resources"},
+    {"action": "craft_required_items"},
+    {"action": "return_to_build_origin"},
+    {"action": "clear_build_area"},
+    {"action": "build_blueprint"},
+    {"action": "report_result"}
+  ]
+}
+```
+
+---
+
+## Détail de l'étape `plan_missing_resources`
+
+Exemple :
+
+```json
+{
+  "required": {
+    "oak_planks": 180,
+    "oak_door": 1,
+    "torch": 4,
+    "glass_pane": 8
+  },
+  "available": {
+    "oak_planks": 48,
+    "oak_log": 10,
+    "coal": 2,
+    "stick": 4
+  },
+  "missing_plan": [
     {
-      "action": "build_house",
-      "params": {
-        "origin": "player_position",
-        "blueprint": "starter_house",
-        "size": {
-          "width": 7,
-          "length": 9,
-          "height": 4
-        },
-        "materials": {
-          "walls": "oak_planks",
-          "floor": "oak_planks",
-          "roof": "stone_bricks",
-          "windows": "glass_pane"
-        }
-      }
+      "target": "oak_planks",
+      "missing": 92,
+      "raw_resource": "oak_log",
+      "raw_needed": 23,
+      "method": "chop_tree"
+    },
+    {
+      "target": "glass_pane",
+      "missing": 8,
+      "raw_resource": "sand",
+      "raw_needed": 6,
+      "method": "collect_sand_and_smelt",
+      "optional": true
     }
   ]
 }
 ```
 
-Exécution attendue :
+---
+
+## Logique de collecte de bois
+
+Pseudo-code :
+
+```js
+async function gatherWood(bot, requiredLogs) {
+  while (countInventory(bot, "oak_log") < requiredLogs) {
+    await safetyManager.check(bot);
+
+    const tree = await resourceFinder.findNearestTree(bot, 64);
+    if (!tree) {
+      throw new Error("Aucun arbre trouvé dans le rayon autorisé.");
+    }
+
+    await movement.goNear(bot, tree.position);
+    await toolPlanner.ensureAxeOrAllowHand(bot);
+    await mining.chopTree(bot, tree);
+    await collecting.collectNearbyItems(bot);
+
+    if (inventory.isFull(bot)) {
+      await inventory.returnToChestAndDeposit(bot);
+    }
+  }
+}
+```
+
+Règles :
 
 ```text
-1. Le bot récupère la position du joueur.
-2. Il génère la maison starter_house.
-3. Il vérifie la zone.
-4. Il calcule les ressources.
-5. Il vérifie son inventaire.
-6. Il construit le sol.
-7. Il construit les murs.
-8. Il ajoute porte et fenêtres.
-9. Il construit le toit.
-10. Il annonce que la maison est terminée.
+- couper tout le tronc accessible ;
+- ramasser les logs au sol ;
+- ne pas partir trop loin ;
+- revenir au chantier ou au coffre après collecte ;
+- si aucun arbre n'est trouvé, demander au joueur d'indiquer une zone boisée.
 ```
 
 ---
 
-## Priorité immédiate pour coder
+## Logique de craft
 
-Commencer par coder dans cet ordre :
+Exemple pour les planches :
 
-```text
-1. bot.js
-2. commandHandler.js
-3. llm.js
-4. validator.js
-5. movement.js
-6. memory.js
-7. houseGenerator.js
-8. materialCounter.js
-9. buildValidator.js
-10. structureBuilder.js
+```js
+async function craftPlanksForHouse(bot, requiredPlanks) {
+  const currentPlanks = countInventory(bot, "oak_planks");
+  const missingPlanks = requiredPlanks - currentPlanks;
+
+  if (missingPlanks <= 0) return;
+
+  const logsNeeded = Math.ceil(missingPlanks / 4);
+
+  if (countInventory(bot, "oak_log") < logsNeeded) {
+    await gatherWood(bot, logsNeeded);
+  }
+
+  await crafting.craftItem(bot, "oak_planks", missingPlanks);
+}
 ```
 
-Ne pas passer à l’étape suivante tant que l’étape actuelle n’est pas testée.
+---
 
+## Logique de construction
+
+Le builder doit être déterministe.
+
+Règles :
+
+```text
+- construire du bas vers le haut ;
+- poser le sol avant les murs ;
+- poser les murs avant le toit ;
+- poser les détails à la fin ;
+- ne pas poser de bloc si le bon bloc est déjà présent ;
+- si un bloc manque, utiliser une alternative ou mettre la tâche en pause.
+```
+
+Pseudo-code :
+
+```js
+async function buildStructure(bot, origin, blueprint) {
+  const blocks = blueprint.blocks;
+
+  blocks.sort((a, b) => a.y - b.y);
+
+  for (const block of blocks) {
+    await safetyManager.check(bot);
+
+    const worldPos = origin.offset(block.x, block.y, block.z);
+    const current = bot.blockAt(worldPos);
+
+    if (current && current.name === block.block) {
+      continue;
+    }
+
+    if (!inventory.hasItem(bot, block.block, 1)) {
+      const alternative = findAlternative(block.block);
+
+      if (alternative && inventory.hasItem(bot, alternative, 1)) {
+        await placeBlockAt(bot, worldPos, alternative);
+      } else if (block.optional) {
+        continue;
+      } else {
+        await taskQueue.pause("Bloc manquant : " + block.block);
+        return;
+      }
+    } else {
+      await placeBlockAt(bot, worldPos, block.block);
+    }
+  }
+}
+```
+
+---
+
+## Vérification de la zone de construction
+
+Avant de construire :
+
+```text
+- vérifier largeur et longueur ;
+- vérifier que le sol est à peu près plat ;
+- vérifier qu'il n'y a pas d'eau/lave ;
+- vérifier qu'il n'y a pas de coffre important à détruire ;
+- vérifier que le bot peut accéder au chantier ;
+- nettoyer seulement les blocs simples : grass, dirt, leaves, flowers.
+```
+
+Pour la v1, ne pas terraformer lourdement. Si le terrain est mauvais, répondre :
+
+```text
+La zone n'est pas assez plate. Choisis un endroit plus plat ou autorise le nivellement.
+```
+
+---
+
+## Gestion des blocs optionnels
+
+Les détails doivent être facultatifs.
+
+Exemple :
+
+```json
+{
+  "x": 2,
+  "y": 2,
+  "z": 0,
+  "block": "glass_pane",
+  "optional": true,
+  "fallback": "air"
+}
+```
+
+Si l'agent n'a pas de verre, il laisse une ouverture.
+
+Priorités :
+
+```text
+Obligatoire : sol, murs, toit minimal.
+Important : porte.
+Optionnel : vitres, torches, décoration.
+```
+
+---
+
+## Messages de statut attendus
+
+L'agent doit informer le joueur clairement.
+
+Exemples :
+
+```text
+Je vais construire une maison simple ici.
+Matériaux estimés : 180 planches, 1 porte, 4 torches, 8 vitres.
+Il me manque 23 logs. Je vais couper du bois proche.
+Je n'ai pas trouvé de sable proche, je construis sans vitres.
+Construction en cours : murs terminés, toit en cours.
+Maison terminée. Les fenêtres sont vides car il manquait du verre.
+```
+
+---
+
+## Priorités de développement
+
+### Version 1 — Base fiable
+
+Objectif : un bot capable de faire des actions simples.
+
+À coder :
+
+```text
+- connexion Mineflayer ;
+- commandes chat ;
+- follow / come / stop ;
+- lecture inventaire ;
+- déplacement vers position ;
+- mémoire base et coffre ;
+- ramassage items proches.
+```
+
+---
+
+### Version 2 — Survie minimale
+
+Objectif : obtenir les ressources simples.
+
+À coder :
+
+```text
+- trouver arbre proche ;
+- couper arbre ;
+- ramasser logs ;
+- crafter planches ;
+- crafter sticks ;
+- crafter crafting table ;
+- déposer/reprendre dans coffre ;
+- vérifier nourriture et vie.
+```
+
+---
+
+### Version 3 — Construction simple
+
+Objectif : construire une maison basique en bois.
+
+À coder :
+
+```text
+- générateur de maison 7 x 9 ;
+- compteur de matériaux ;
+- vérification zone ;
+- pose bloc par bloc ;
+- reprise si bloc manquant ;
+- rapport de statut.
+```
+
+---
+
+### Version 4 — Craft et alternatives
+
+Objectif : rendre l'agent plus autonome.
+
+À coder :
+
+```text
+- fabriquer outils ;
+- fabriquer porte ;
+- fabriquer torches ;
+- utiliser charbon ou charbon de bois ;
+- récupérer sable ;
+- cuire verre ;
+- construire avec variantes de bois.
+```
+
+---
+
+### Version 5 — Tâches longues robustes
+
+Objectif : agent réellement utile en survie.
+
+À coder :
+
+```text
+- task queue persistante ;
+- pause / reprise ;
+- gestion nuit / mobs ;
+- retour base automatique ;
+- collecte multi-ressources ;
+- reprise après mort ou déconnexion.
+```
+
+---
+
+## Règles de robustesse
+
+L'agent doit toujours :
+
+```text
+- vérifier avant d'agir ;
+- refuser une action dangereuse ;
+- ne pas partir trop loin ;
+- ne pas casser les coffres ou blocs importants ;
+- sauvegarder les tâches longues ;
+- prévenir quand une ressource manque ;
+- utiliser des alternatives simples ;
+- demander de l'aide si la situation est trop complexe.
+```
+
+---
+
+## Ce que le LLM doit faire
+
+Le LLM doit :
+
+```text
+- comprendre la commande ;
+- choisir un objectif ;
+- choisir un blueprint ;
+- identifier les contraintes ;
+- produire du JSON propre ;
+- ne jamais inventer d'action non autorisée ;
+- ne jamais générer de code à exécuter.
+```
+
+---
+
+## Ce que le code doit faire
+
+Le code doit :
+
+```text
+- valider le JSON ;
+- refuser les actions inconnues ;
+- générer les plans détaillés ;
+- compter les ressources ;
+- gérer les déplacements ;
+- gérer les outils ;
+- gérer le craft ;
+- construire bloc par bloc ;
+- sauvegarder l'état ;
+- gérer les erreurs.
+```
+
+---
+
+## Exemple de prompt système pour le LLM
+
+```text
+Tu contrôles un agent Minecraft en mode survie.
+
+Tu ne dois jamais écrire de code.
+Tu ne dois jamais produire autre chose que du JSON valide.
+Tu dois choisir uniquement des objectifs connus.
+
+Objectifs autorisés :
+- come_to_player
+- follow_player
+- collect_nearby_items
+- build_house
+- gather_resource
+- deposit_items
+- go_to_saved_location
+
+Pour une construction, tu ne dois pas lister tous les blocs.
+Tu dois choisir un blueprint, une position et des contraintes.
+
+Si la commande est ambiguë, choisis l'interprétation la plus simple et la plus sûre.
+```
+
+---
+
+## Conclusion
+
+Pour un agent Minecraft utile en survie, il faut éviter de le rendre trop libre.
+
+La bonne architecture est :
+
+```text
+LLM local
+→ comprend la demande
+→ produit un objectif JSON
+→ planner de survie
+→ calcule ressources et sous-tâches
+→ actions déterministes
+→ Mineflayer contrôle le bot
+```
+
+Pour l'exemple de la maison, le plus important est de ne pas commencer par une maison complexe. Il faut d'abord réussir une maison simple en bois, avec collecte automatique des logs, craft des planches, vérification de la zone, puis construction bloc par bloc.
+
+Une fois cette base fiable, l'agent pourra progressivement apprendre à construire des structures plus complexes, utiliser des schematics, gérer plusieurs coffres, miner, crafter et reprendre des tâches longues.
