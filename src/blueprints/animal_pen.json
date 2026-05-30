@@ -1,0 +1,20 @@
+{
+  "name": "animal_pen",
+  "description": "Enclos pour animaux. Clôture en bois, ouverture avec portail.",
+  "width": 10,
+  "depth": 10,
+  "wall_height": 2,
+  "materials": {
+    "wall": "oak_fence",
+    "floor": "grass_block",
+    "roof": "air",
+    "door_x": 5,
+    "door_z": 0
+  },
+  "required_materials": {
+    "oak_fence": 36,
+    "oak_fence_gate": 1
+  },
+  "optional_materials": {},
+  "style": "utility"
+}
