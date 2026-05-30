@@ -1,0 +1,25 @@
+{
+  "name": "starter_house",
+  "description": "Petite maison de survie rectangulaire, toit plat, en planches de chêne.",
+  "width": 7,
+  "depth": 9,
+  "wall_height": 4,
+  "materials": {
+    "wall": "oak_planks",
+    "floor": "oak_planks",
+    "roof": "oak_planks",
+    "door_x": 3,
+    "door_z": 0
+  },
+  "required_materials": {
+    "oak_planks": 180,
+    "oak_door": 1,
+    "torch": 4,
+    "glass_pane": 8
+  },
+  "optional_materials": {
+    "torch": 4,
+    "glass_pane": 8
+  },
+  "style": "simple_survival"
+}

@@ -1,0 +1,25 @@
+{
+  "name": "storage_room",
+  "description": "Petite pièce de stockage avec coffres. À construire adjacente à la base.",
+  "width": 5,
+  "depth": 5,
+  "wall_height": 3,
+  "materials": {
+    "wall": "cobblestone",
+    "floor": "cobblestone",
+    "roof": "cobblestone",
+    "door_x": 2,
+    "door_z": 0
+  },
+  "required_materials": {
+    "cobblestone": 120,
+    "oak_door": 1,
+    "torch": 2,
+    "chest": 4
+  },
+  "optional_materials": {
+    "torch": 2,
+    "chest": 4
+  },
+  "style": "utility"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "bot_minecraft",
+  "version": "1.0.0",
+  "description": "Agent IA local Minecraft en mode survie",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.23.0",
+    "mineflayer-pathfinder": "^2.4.5",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.0",
+    "vec3": "^0.1.10",
+    "minecraft-data": "^3.58.0",
+    "prismarine-block": "^1.16.0",
+    "prismarine-item": "^1.14.0"
+  }
+}

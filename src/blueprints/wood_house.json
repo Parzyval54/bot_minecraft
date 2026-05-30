@@ -1,0 +1,26 @@
+{
+  "name": "wood_house",
+  "description": "Maison en bois légèrement plus grande avec fenêtres.",
+  "width": 9,
+  "depth": 11,
+  "wall_height": 5,
+  "materials": {
+    "wall": "oak_planks",
+    "floor": "oak_planks",
+    "roof": "cobblestone",
+    "door_x": 4,
+    "door_z": 0
+  },
+  "required_materials": {
+    "oak_planks": 280,
+    "cobblestone": 99,
+    "oak_door": 1,
+    "torch": 6,
+    "glass_pane": 16
+  },
+  "optional_materials": {
+    "torch": 6,
+    "glass_pane": 16
+  },
+  "style": "simple_survival"
+}
