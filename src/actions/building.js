@@ -5,6 +5,7 @@
  */
 
 const { goals } = require('mineflayer-pathfinder');
+const { Vec3 } = require('vec3');
 
 /**
  * Place un bloc à une position donnée.
@@ -33,7 +34,7 @@ async function placeBlock(bot, blockName, pos) {
   await bot.pathfinder.goto(new goals.GoalNear(pos.x, pos.y, pos.z, 3));
 
   // Trouver un bloc de référence adjacent pour poser dessus
-  const refBlock = bot.blockAt({ x: pos.x, y: pos.y - 1, z: pos.z });
+  const refBlock = bot.blockAt(new Vec3(pos.x, pos.y - 1, pos.z));
   if (!refBlock) {
     throw new Error(`Pas de surface pour poser à ${JSON.stringify(pos)}`);
   }

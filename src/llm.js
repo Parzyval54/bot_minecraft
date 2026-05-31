@@ -130,6 +130,10 @@ function normalizeItem(item) {
   return normalized ? normalized.replace(/\s+/g, '_') : undefined;
 }
 
+function isDeliveryInstruction(instruction) {
+  return /\b(donne(?:-moi)?|donne moi|file(?:-moi| moi)?|apporte(?:-moi| moi)?|passe(?:-moi| moi)?|remets(?:-moi| moi)?|fournis(?:-moi| moi)?|lache(?:-moi| moi)?|drop|give me|bring me|hand me)\b/i.test(simplifyText(instruction));
+}
+
 function normalizeGoal(goal, instruction, options = {}) {
   if (!goal || typeof goal !== 'object') return goal;
 
@@ -148,15 +152,31 @@ function normalizeGoal(goal, instruction, options = {}) {
   } else if (options.preferInstructionCount && /\d|stack|pile/i.test(instruction)) {
     normalized.count = inferCount(instruction);
   }
+
+  if (normalized.goal === 'drop_items' && !/\d|stack|pile/i.test(instruction)) {
+    normalized.count = undefined;
+  }
   return normalized;
 }
 
 function normalizePlan(plan, instruction) {
   const rawGoals = Array.isArray(plan?.goals) ? plan.goals : [plan];
   const preferInstructionCount = rawGoals.length === 1;
-  return {
-    goals: rawGoals.map(goal => normalizeGoal(goal, instruction, { preferInstructionCount }))
-  };
+  const goals = rawGoals.map(goal => normalizeGoal(goal, instruction, { preferInstructionCount }));
+
+  if (isDeliveryInstruction(instruction) && !goals.some(goal => goal.goal === 'drop_items')) {
+    const sourceGoal = [...goals].reverse().find(goal => goal.item || goal.resource);
+    if (sourceGoal) {
+      goals.push({
+        goal: 'drop_items',
+        item: sourceGoal.item || sourceGoal.resource,
+        count: sourceGoal.count,
+        delivery: true
+      });
+    }
+  }
+
+  return { goals };
 }
 
 /**
@@ -248,10 +268,14 @@ Exemples de traduction :
 - "retourne à la base" -> {"goals":[{"goal":"return_to_base"}]}
 - "construis une petite maison" -> {"goals":[{"goal":"build_house","blueprint":"starter_house"}]}
 - "avec le bois fais un établi et une hache" -> {"goals":[{"goal":"craft_item","item":"crafting_table","count":1},{"goal":"craft_tool","item":"wooden_axe","count":1}]}
-- "drop une porte de ton inventaire" -> {"goals":[{"goal":"drop_items","item":"oak_door","count":1}]}
+- "donne moi du bois" -> {"goals":[{"goal":"collect_resource","resource":"oak_log","count":1},{"goal":"drop_items","item":"oak_log","count":1}]}
+- "file-moi du bois" -> {"goals":[{"goal":"collect_resource","resource":"oak_log","count":1},{"goal":"drop_items","item":"oak_log","count":1}]}
+- "drop une porte de ton inventaire" -> {"goals":[{"goal":"drop_items","item":"oak_door"}]}
 - "jette 5 torches" -> {"goals":[{"goal":"drop_items","item":"torch","count":5}]}
 
-Note : drop_items jette des items directement depuis l'inventaire actuel du bot, sans passer par un coffre.
+Note : drop_items jette des items directement depuis l'inventaire actuel du bot, sans passer par un coffre. Si aucune quantité n'est précisée, on dépose tous les items de ce type.
+
+Pour les demandes du type "donne moi", "file moi" ou "apporte moi", produis la collecte ou le craft puis ajoute ensuite "drop_items" avec le même item afin de remettre l'objet au joueur.
 `;
 
   const userMessage = `

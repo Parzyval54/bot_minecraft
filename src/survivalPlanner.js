@@ -86,7 +86,7 @@ async function getStepsForGoal(bot, goal, username = '') {
       return [{ action: 'follow_player', username }];
 
     case 'drop_items':
-      return [{ action: 'drop_items', item: goal.item, count: goal.count }];
+      return [{ action: 'drop_items', item: goal.item, count: goal.count, username }];
 
     default:
       return [{ action: goal.goal }];

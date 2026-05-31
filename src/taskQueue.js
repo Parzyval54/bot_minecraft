@@ -174,6 +174,9 @@ async function executeStep(bot, step) {
       return;
     }
     case 'drop_items':
+      if (step.username) {
+        await movement.comeToPlayer(bot, step.username);
+      }
       await inventory.dropItems(bot, step.item, step.count);
       return;
     case 'craft_item':

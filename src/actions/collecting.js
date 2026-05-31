@@ -6,6 +6,7 @@ const { mineByName } = require('./mining');
 const { getBlockName } = require('../survival/resourceFinder');
 const { collectNearbyItems } = require('./inventory');
 const { goals } = require('mineflayer-pathfinder');
+const { Vec3 } = require('vec3');
 
 // Rayon de recherche maximal
 const MAX_SEARCH_RADIUS = 64;
@@ -93,7 +94,7 @@ function collectTrunkPositions(bot, baseLog, blockTypeId) {
   const trunk = [];
   let y = baseLog.position.y;
   while (true) {
-    const block = bot.blockAt({ x, y, z });
+    const block = bot.blockAt(new Vec3(x, y, z));
     if (!block || block.type !== blockTypeId) break;
     trunk.push(block);
     y++;
@@ -158,11 +159,11 @@ async function chopTrees(bot, logType, count) {
     const { x, z } = log.position;
     let baseY = log.position.y;
     while (baseY > 0) {
-      const below = bot.blockAt({ x, y: baseY - 1, z });
+      const below = bot.blockAt(new Vec3(x, baseY - 1, z));
       if (!below || below.type !== blockType.id) break;
       baseY--;
     }
-    const baseLog = bot.blockAt({ x, y: baseY, z }) || log;
+    const baseLog = bot.blockAt(new Vec3(x, baseY, z)) || log;
 
     try {
       const mined = await chopWholeTrunk(bot, baseLog, blockType.id);

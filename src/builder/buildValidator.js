@@ -2,6 +2,8 @@
  * buildValidator.js — Vérifie que la zone de construction est libre et plate
  */
 
+const { Vec3 } = require('vec3');
+
 /**
  * Vérifie si la zone autour de l'origine est assez plate et libre.
  *
@@ -41,7 +43,7 @@ function checkBuildArea(bot, origin, width = 7, depth = 9) {
  */
 function findSurface(bot, x, startY, z) {
   for (let y = startY + 5; y >= startY - 5; y--) {
-    const block = bot.blockAt({ x, y, z });
+    const block = bot.blockAt(new Vec3(x, y, z));
     if (block && block.name !== 'air' && block.name !== 'water' && block.name !== 'lava') {
       return y;
     }
