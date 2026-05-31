@@ -211,13 +211,31 @@ Buts autorisés :
   build_house, build_blueprint, place_block.
 
 Ressources connues :
-oak_log, birch_log, spruce_log, cobblestone, stone, coal, sand, gravel,
-iron_ore, wool.
+oak_log, birch_log, spruce_log, cobblestone, stone, coal, iron_ore, gold_ore,
+diamond, redstone, obsidian, sand, gravel, wool, wheat, sugar_cane.
 
-Items fabricables connus :
-oak_planks, birch_planks, spruce_planks, stick, crafting_table, wooden_pickaxe,
-stone_pickaxe, wooden_axe, stone_axe, torch, oak_door, birch_door, spruce_door,
-furnace, glass, glass_pane.
+Items fabricables connus (par catégorie) :
+- Bois : oak_planks, birch_planks, spruce_planks, stick
+- Stockage : crafting_table, chest, trapped_chest, barrel, hopper
+- Blocs : furnace, glass, glass_pane, glass_bottle, coal_block, iron_block, gold_block, diamond_block, torch, redstone_lamp
+- Portes/trappes : oak_door, birch_door, spruce_door, oak_trapdoor, birch_trapdoor, spruce_trapdoor
+- Barrières : oak_fence, birch_fence, spruce_fence, oak_fence_gate, birch_fence_gate, spruce_fence_gate
+- Dalles : oak_slab, stone_slab, cobblestone_slab
+- Escaliers : oak_stairs, stone_stairs, cobblestone_stairs
+- Murs/divers : cobblestone_wall, stone_wall, ladder, oak_sign, birch_sign, spruce_sign
+- Transport : oak_boat, birch_boat, spruce_boat, minecart, rail, powered_rail, detector_rail
+- Outils bois : wooden_pickaxe, wooden_axe, wooden_shovel, wooden_hoe, wooden_sword
+- Outils pierre : stone_pickaxe, stone_axe, stone_shovel, stone_hoe, stone_sword
+- Outils fer : iron_pickaxe, iron_axe, iron_shovel, iron_hoe, iron_sword
+- Outils divers : shears, flint_and_steel, bucket, fishing_rod, bow, arrow, shield, crossbow, compass, empty_map
+- Armure cuir : leather_helmet, leather_chestplate, leather_leggings, leather_boots
+- Armure fer : iron_helmet, iron_chestplate, iron_leggings, iron_boots
+- Armure diamant : diamond_helmet, diamond_chestplate, diamond_leggings, diamond_boots
+- Nourriture : bread, bowl, mushroom_stew, sugar, paper, cookie, hay_block
+- Livres/enchantements : book, bookshelf, enchanting_table, anvil, grindstone, smithing_table, stonecutter, loom, lectern
+- Redstone : lever, stone_button, oak_button, stone_pressure_plate, oak_pressure_plate, redstone_torch, repeater, comparator, dispenser, dropper, piston, sticky_piston, observer
+- Brassage : brewing_stand, cauldron, eye_of_ender, blaze_powder
+- Explosifs : tnt, firework_rocket
 
 Blueprints autorisés :
 starter_house, wood_house, storage_room, animal_pen.

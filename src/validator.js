@@ -50,16 +50,14 @@ const RESOURCE_GOALS = new Set([
 ]);
 
 const ALLOWED_RESOURCES = new Set([
-  'oak_log',
-  'birch_log',
-  'spruce_log',
-  'cobblestone',
-  'stone',
-  'coal',
-  'sand',
-  'gravel',
-  'iron_ore',
-  'wool'
+  // Bois
+  'oak_log', 'birch_log', 'spruce_log',
+  // Pierre et minerais
+  'cobblestone', 'stone', 'coal', 'iron_ore', 'gold_ore', 'diamond', 'redstone', 'obsidian',
+  // Granulats et divers
+  'sand', 'gravel', 'wool',
+  // Végétaux
+  'wheat', 'sugar_cane'
 ]);
 
 const CRAFT_GOALS = new Set([
@@ -68,22 +66,61 @@ const CRAFT_GOALS = new Set([
 ]);
 
 const ALLOWED_CRAFT_ITEMS = new Set([
-  'oak_planks',
-  'birch_planks',
-  'spruce_planks',
-  'stick',
-  'crafting_table',
-  'wooden_pickaxe',
-  'stone_pickaxe',
-  'wooden_axe',
-  'stone_axe',
-  'torch',
-  'oak_door',
-  'birch_door',
-  'spruce_door',
-  'furnace',
-  'glass',
-  'glass_pane'
+  // Planches / bâtons
+  'oak_planks', 'birch_planks', 'spruce_planks', 'stick',
+  // Établis et stockage
+  'crafting_table', 'chest', 'trapped_chest', 'barrel', 'hopper',
+  // Portes et trappes
+  'oak_door', 'birch_door', 'spruce_door',
+  'oak_trapdoor', 'birch_trapdoor', 'spruce_trapdoor',
+  // Barrières
+  'oak_fence', 'birch_fence', 'spruce_fence',
+  'oak_fence_gate', 'birch_fence_gate', 'spruce_fence_gate',
+  // Dalles
+  'oak_slab', 'stone_slab', 'cobblestone_slab',
+  // Escaliers
+  'oak_stairs', 'stone_stairs', 'cobblestone_stairs',
+  // Murs / divers bois
+  'cobblestone_wall', 'stone_wall', 'ladder',
+  'oak_sign', 'birch_sign', 'spruce_sign',
+  // Blocs de traitement
+  'furnace', 'glass', 'glass_pane', 'glass_bottle',
+  'coal_block', 'iron_block', 'gold_block', 'diamond_block',
+  // Lumière
+  'torch', 'redstone_lamp',
+  // Transport
+  'oak_boat', 'birch_boat', 'spruce_boat',
+  'minecart', 'rail', 'powered_rail', 'detector_rail',
+  // Outils en bois
+  'wooden_pickaxe', 'wooden_axe', 'wooden_shovel', 'wooden_hoe', 'wooden_sword',
+  // Outils en pierre
+  'stone_pickaxe', 'stone_axe', 'stone_shovel', 'stone_hoe', 'stone_sword',
+  // Outils en fer
+  'iron_pickaxe', 'iron_axe', 'iron_shovel', 'iron_hoe', 'iron_sword',
+  // Outils divers
+  'shears', 'flint_and_steel', 'bucket', 'fishing_rod', 'compass', 'empty_map',
+  // Combat
+  'bow', 'arrow', 'shield', 'crossbow',
+  // Armure en cuir
+  'leather_helmet', 'leather_chestplate', 'leather_leggings', 'leather_boots',
+  // Armure en fer
+  'iron_helmet', 'iron_chestplate', 'iron_leggings', 'iron_boots',
+  // Armure en diamant
+  'diamond_helmet', 'diamond_chestplate', 'diamond_leggings', 'diamond_boots',
+  // Nourriture
+  'bread', 'bowl', 'mushroom_stew', 'sugar', 'paper', 'cookie', 'hay_block',
+  // Livres et enchantements
+  'book', 'bookshelf', 'enchanting_table', 'anvil',
+  'grindstone', 'smithing_table', 'stonecutter', 'loom', 'lectern',
+  // Redstone
+  'lever', 'stone_button', 'oak_button',
+  'stone_pressure_plate', 'oak_pressure_plate',
+  'redstone_torch', 'repeater', 'comparator',
+  'dispenser', 'dropper', 'piston', 'sticky_piston', 'observer',
+  // Brassage
+  'brewing_stand', 'cauldron', 'eye_of_ender', 'blaze_powder',
+  // Explosifs
+  'tnt', 'firework_rocket'
 ]);
 
 const ALLOWED_BLUEPRINTS = [
