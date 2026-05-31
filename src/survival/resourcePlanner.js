@@ -14,9 +14,12 @@ const CRAFT_RECIPES = {
   crafting_table:{ oak_planks: 4 },
   wooden_pickaxe:{ oak_planks: 3, stick: 2 },
   stone_pickaxe: { cobblestone: 3, stick: 2 },
+  wooden_axe:    { oak_planks: 3, stick: 2 },
   stone_axe:     { cobblestone: 3, stick: 2 },
   torch:         { coal: 0.25, stick: 0.25 }, // 1 coal + 1 stick → 4 torches
   oak_door:      { oak_planks: 2 },           // 6 planks → 3 doors
+  birch_door:    { birch_planks: 2 },
+  spruce_door:   { spruce_planks: 2 },
   furnace:       { cobblestone: 8 },
   glass:         { sand: 1 },                 // cuisson 1:1 (nécessite smelting)
   glass_pane:    { glass: 0.375 }             // 6 glass → 16 glass_pane

@@ -3,6 +3,7 @@
  */
 
 const { mineBlock } = require('../actions/mining');
+const { isProtectedTraversalBlock } = require('../actions/movement');
 
 /**
  * Nettoie une zone rectangulaire (retire tous les blocs non-air).
@@ -21,7 +22,7 @@ async function clearBuildArea(bot, origin, width = 7, depth = 9, height = 5) {
       for (let dz = 0; dz < depth; dz++) {
         const pos = { x: ox + dx, y: oy + dy, z: oz + dz };
         const block = bot.blockAt(pos);
-        if (block && block.name !== 'air') {
+        if (block && block.name !== 'air' && !isProtectedTraversalBlock(block)) {
           await mineBlock(bot, pos).catch(() => {});
         }
       }

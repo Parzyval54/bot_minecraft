@@ -28,9 +28,13 @@ const RESOURCE_BLOCK_MAP = {
  * @param {string} resource - Nom de la ressource (ex: "oak_log")
  * @returns {Object|null}   - Bloc trouvé ou null
  */
+function getBlockName(resource) {
+  return RESOURCE_BLOCK_MAP[resource] || resource;
+}
+
 function findResource(bot, resource) {
   const mcData = require('minecraft-data')(bot.version);
-  const blockName = RESOURCE_BLOCK_MAP[resource] || resource;
+  const blockName = getBlockName(resource);
   const blockType = mcData.blocksByName[blockName];
 
   if (!blockType) {
@@ -65,4 +69,4 @@ function getNotFoundMessage(resource) {
   return messages[resource] || `Impossible de trouver ${resource} à portée.`;
 }
 
-module.exports = { findResource, getNotFoundMessage, MAX_SEARCH_RADIUS, MAX_RESOURCE_ATTEMPTS };
+module.exports = { findResource, getBlockName, getNotFoundMessage, MAX_SEARCH_RADIUS, MAX_RESOURCE_ATTEMPTS };

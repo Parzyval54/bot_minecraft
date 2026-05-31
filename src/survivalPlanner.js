@@ -18,8 +18,8 @@ const inventoryState = require('./state/inventoryState');
  * @param {Object} bot  - Instance Mineflayer
  * @param {Object} goal - Objectif validé (ex: { goal: "build_house", blueprint: "starter_house", ... })
  */
-async function plan(bot, goal) {
-  console.log('[PLANNER] Planification de :', goal.goal);
+async function plan(bot, goal, username = '') {
+  console.log('[PLANNER] Planification de :', goal.goals?.map(item => item.goal) || goal.goal);
 
   // 1. Vérification de sécurité avant toute longue tâche
   const safe = await safetyManager.check(bot);
@@ -28,42 +28,11 @@ async function plan(bot, goal) {
     return;
   }
 
-  // 2. Générer les étapes selon l'objectif
-  let steps = [];
-
-  switch (goal.goal) {
-    case 'build_house':
-    case 'build_blueprint':
-      steps = await planBuildHouse(bot, goal);
-      break;
-
-    case 'find_resource':
-    case 'collect_resource':
-    case 'mine_block':
-    case 'chop_tree':
-      steps = [
-        { action: 'find_resource', resource: goal.resource },
-        { action: 'collect_resource', resource: goal.resource, count: goal.count || 1 }
-      ];
-      break;
-
-    case 'come_to_player':
-      steps = [{ action: 'come_to_player' }];
-      break;
-
-    case 'return_to_base':
-      steps = [{ action: 'go_to_saved_location', name: 'base' }];
-      break;
-
-    case 'deposit_items':
-      steps = [
-        { action: 'go_to_saved_location', name: 'main_chest' },
-        { action: 'deposit_items' }
-      ];
-      break;
-
-    default:
-      steps = [{ action: goal.goal }];
+  // 2. Générer les étapes de chaque objectif dans l'ordre demandé
+  const goals = Array.isArray(goal.goals) ? goal.goals : [goal];
+  const steps = [];
+  for (const childGoal of goals) {
+    steps.push(...await getStepsForGoal(bot, childGoal, username));
   }
 
   if (steps.length === 0) {
@@ -77,6 +46,51 @@ async function plan(bot, goal) {
 
   // 4. Exécuter les étapes
   await taskQueue.run(bot, task);
+}
+
+async function getStepsForGoal(bot, goal, username = '') {
+  switch (goal.goal) {
+    case 'build_house':
+    case 'build_blueprint':
+      return planBuildHouse(bot, goal);
+
+    case 'find_resource':
+    case 'collect_resource':
+    case 'mine_block':
+    case 'chop_tree':
+      return [
+        { action: 'find_resource', resource: goal.resource },
+        { action: 'collect_resource', resource: goal.resource, count: goal.count || 1 }
+      ];
+
+    case 'craft_item':
+    case 'craft_tool':
+      return [{ action: goal.goal, item: goal.item, count: goal.count || 1 }];
+
+    case 'come_to_player':
+      return [{ action: 'come_to_player', username }];
+
+    case 'check_inventory':
+      return [{ action: 'check_inventory' }];
+
+    case 'return_to_base':
+      return [{ action: 'go_to_saved_location', name: 'base' }];
+
+    case 'deposit_items':
+      return [
+        { action: 'go_to_saved_location', name: 'main_chest' },
+        { action: 'deposit_items' }
+      ];
+
+    case 'follow_player':
+      return [{ action: 'follow_player', username }];
+
+    case 'drop_items':
+      return [{ action: 'drop_items', item: goal.item, count: goal.count }];
+
+    default:
+      return [{ action: goal.goal }];
+  }
 }
 
 /**
@@ -123,4 +137,4 @@ async function planBuildHouse(bot, goal) {
   return steps;
 }
 
-module.exports = { plan };
+module.exports = { getStepsForGoal, plan };

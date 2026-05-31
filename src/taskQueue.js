@@ -7,10 +7,16 @@
 
 const fs = require('fs');
 const path = require('path');
+const collecting = require('./actions/collecting');
+const resourceFinder = require('./survival/resourceFinder');
+const { craftItemWithDependencies } = require('./actions/crafting');
+const inventory = require('./actions/inventory');
+const movement = require('./actions/movement');
 
 const QUEUE_FILE = path.join(__dirname, '..', 'logs', 'tasks.log');
 
 let currentTask = null;
+const pendingTasks = [];
 
 /**
  * Crée une nouvelle tâche.
@@ -22,7 +28,8 @@ let currentTask = null;
 function create(goal, steps) {
   const task = {
     id: `task_${Date.now()}`,
-    goal: goal.goal,
+    goal: goal.goal || 'multi_goal',
+    goals: goal.goals || [goal],
     blueprint: goal.blueprint || null,
     status: 'pending',
     current_step: 0,
@@ -31,7 +38,6 @@ function create(goal, steps) {
     remaining_materials: {}
   };
 
-  currentTask = task;
   saveLog(task);
   return task;
 }
@@ -43,6 +49,15 @@ function create(goal, steps) {
  * @param {Object} task - Tâche à exécuter
  */
 async function run(bot, task) {
+  if (currentTask && currentTask !== task) {
+    task.status = 'queued';
+    pendingTasks.push(task);
+    saveLog(task);
+    bot.chat('Tâche ajoutée à la file.');
+    return;
+  }
+
+  currentTask = task;
   task.status = 'running';
 
   for (let i = task.current_step; i < task.steps.length; i++) {
@@ -56,9 +71,16 @@ async function run(bot, task) {
       await executeStep(bot, step);
     } catch (err) {
       task.status = 'failed';
+      currentTask = null;
       console.error(`[QUEUE] Échec à l'étape ${i + 1} :`, err.message);
       bot.chat(`Erreur à l'étape "${step.action}" : ${err.message}. Tâche suspendue.`);
       saveLog(task);
+
+      const nextTask = pendingTasks.shift();
+      if (nextTask) {
+        bot.chat('Je passe à la tâche suivante.');
+        await run(bot, nextTask);
+      }
       return;
     }
   }
@@ -67,6 +89,12 @@ async function run(bot, task) {
   bot.chat('Tâche terminée.');
   saveLog(task);
   currentTask = null;
+
+  const nextTask = pendingTasks.shift();
+  if (nextTask) {
+    bot.chat('Je passe à la tâche suivante.');
+    await run(bot, nextTask);
+  }
 }
 
 /**
@@ -77,6 +105,10 @@ async function run(bot, task) {
 async function resume(bot) {
   if (!currentTask) {
     bot.chat('Aucune tâche à reprendre.');
+    return;
+  }
+  if (currentTask.status === 'running') {
+    bot.chat('La tâche est déjà en cours.');
     return;
   }
   if (currentTask.status === 'completed') {
@@ -90,12 +122,15 @@ async function resume(bot) {
 /**
  * Annule la tâche en cours.
  */
-function cancel() {
+async function cancel(bot) {
   if (currentTask) {
     currentTask.status = 'cancelled';
     saveLog(currentTask);
     currentTask = null;
   }
+
+  const nextTask = pendingTasks.shift();
+  if (bot && nextTask) await run(bot, nextTask);
 }
 
 /**
@@ -106,15 +141,58 @@ function cancel() {
  * @param {Object} step - Étape à exécuter
  */
 async function executeStep(bot, step) {
-  // Les actions seront importées depuis src/actions/
-  // Pour l'instant, les étapes inconnues sont ignorées avec un avertissement.
-  console.warn(`[QUEUE] Action non implémentée : ${step.action}`);
+  switch (step.action) {
+    case 'come_to_player':
+      await movement.comeToPlayer(bot, step.username || '');
+      return;
+    case 'follow_player':
+      await movement.followPlayer(bot, step.username || '');
+      bot.chat('Je te suis.');
+      return;
+    case 'find_resource': {
+      const block = resourceFinder.findResource(bot, step.resource);
+      if (!block) throw new Error(resourceFinder.getNotFoundMessage(step.resource));
+      bot.chat(step.resource + ' trouvé à proximité.');
+      return;
+    }
+    case 'collect_resource':
+      await collecting.collectResource(bot, step.resource, step.count || 1);
+      return;
+    case 'collect_nearby_items':
+      await inventory.collectNearbyItems(bot);
+      return;
+    case 'check_inventory': {
+      const items = bot.inventory.items();
+      if (items.length === 0) {
+        bot.chat('Mon inventaire est vide.');
+      } else {
+        const summary = items
+          .map(i => `${i.name} x${i.count}`)
+          .join(', ');
+        bot.chat(`Inventaire : ${summary}`);
+      }
+      return;
+    }
+    case 'drop_items':
+      await inventory.dropItems(bot, step.item, step.count);
+      return;
+    case 'craft_item':
+    case 'craft_tool': {
+      if (!step.item) throw new Error('Item à fabriquer absent.');
+      const crafted = await craftItemWithDependencies(bot, step.item, step.count || 1);
+      if (!crafted) throw new Error('Impossible de fabriquer ' + step.item + '.');
+      return;
+    }
+    default:
+      throw new Error('Action non implémentée : ' + step.action);
+  }
 }
 
 /**
  * Sauvegarde la tâche dans le log.
  */
 function saveLog(task) {
+  fs.mkdirSync(path.dirname(QUEUE_FILE), { recursive: true });
   const line = JSON.stringify({ ...task, timestamp: new Date().toISOString() }) + '\n';
   fs.appendFileSync(QUEUE_FILE, line, 'utf8');
 }
@@ -123,4 +201,4 @@ function getCurrent() {
   return currentTask;
 }
 
-module.exports = { create, run, resume, cancel, getCurrent };
+module.exports = { create, run, resume, cancel, executeStep, getCurrent };

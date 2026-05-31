@@ -5,7 +5,7 @@
  * Si non, il le craft si possible.
  */
 
-const { craftItem } = require('../actions/crafting');
+const { craftItemWithDependencies } = require('../actions/crafting');
 const { countItem } = require('../state/inventoryState');
 
 // Outil requis par type de ressource
@@ -46,7 +46,7 @@ async function ensureTool(bot, resource) {
   }
 
   bot.chat(`Il me faut un ${req.tool}. Je vais le crafter.`);
-  return await craftItem(bot, req.tool, 1);
+  return await craftItemWithDependencies(bot, req.tool, 1);
 }
 
 module.exports = { ensureTool, TOOL_REQUIREMENTS };

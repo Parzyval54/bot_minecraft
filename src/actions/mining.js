@@ -4,15 +4,22 @@
  * Le bot vérifie toujours l'outil avant de miner.
  */
 
+const { isProtectedTraversalBlock } = require('./movement');
+const { collectNearbyItems } = require('./inventory');
+
 /**
  * Mine un bloc à une position donnée.
  *
  * @param {Object} bot - Instance Mineflayer
  * @param {Object} pos - { x, y, z }
  */
-async function mineBlock(bot, pos) {
+async function mineBlock(bot, pos, options = {}) {
   const block = bot.blockAt(pos);
-  if (!block || block.name === 'air') return;
+  if (!block || block.name === 'air') return false;
+  if (isProtectedTraversalBlock(block)) {
+    bot.chat('Je préserve ' + block.name + ' : ce bloc peut servir de passage.');
+    return false;
+  }
 
   // Se positionner près du bloc
   await bot.pathfinder.goto(
@@ -20,6 +27,8 @@ async function mineBlock(bot, pos) {
   );
 
   await bot.dig(block);
+  if (options.collectDrops) await collectNearbyItems(bot, { announce: false });
+  return true;
 }
 
 /**
@@ -49,7 +58,8 @@ async function mineByName(bot, blockName, count) {
       break;
     }
 
-    await mineBlock(bot, block.position);
+    const didMine = await mineBlock(bot, block.position, { collectDrops: true });
+    if (!didMine) break;
     mined++;
   }
 }

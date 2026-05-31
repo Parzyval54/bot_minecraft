@@ -6,7 +6,7 @@
  * Les commandes complexes sont envoyées au LLM puis au survivalPlanner.
  */
 
-const { askLLM } = require('./llm');
+const { askLLM, getLastLLMError } = require('./llm');
 const validator = require('./validator');
 const survivalPlanner = require('./survivalPlanner');
 const taskQueue = require('./taskQueue');
@@ -17,18 +17,28 @@ const botStatus = require('./state/botStatus');
 const movement = require('./actions/movement');
 const inventory = require('./actions/inventory');
 
+function normalizeDirectInstruction(value) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 -]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Commandes directes sans LLM
 const DIRECT_COMMANDS = {
   'ping': 'ping',
   'viens': 'come_to_player',
   'viens ici': 'come_to_player',
-  'suis-moi': 'follow_player',
+  'suis moi': 'follow_player',
   'stop': 'stop',
   'ramasse les items': 'collect_nearby_items',
   'statut': 'report_status',
   'reprends': 'resume_task',
-  'annule la tâche': 'cancel_task',
-  'dépose ton inventaire dans le coffre': 'deposit_items'
+  'annule la tache': 'cancel_task',
+  'depose ton inventaire dans le coffre': 'deposit_items'
 };
 
 async function executeDirectAction(bot, username, action) {
@@ -61,7 +71,7 @@ async function executeDirectAction(bot, username, action) {
       await taskQueue.resume(bot);
       return;
     case 'cancel_task':
-      taskQueue.cancel();
+      await taskQueue.cancel(bot);
       bot.chat('Tache annulee.');
       return;
     case 'deposit_items':
@@ -81,12 +91,13 @@ async function executeDirectAction(bot, username, action) {
  */
 async function handle(bot, username, message) {
   // Supprimer le préfixe "agent" et nettoyer
-  const instruction = message.replace(/^agent\s*/i, '').trim().toLowerCase();
+  const instruction = message.replace(/^agent\s*/i, '').trim();
+  const directInstruction = normalizeDirectInstruction(instruction);
 
   console.log(`[CMD] Commande reçue de ${username} : "${instruction}"`);
 
   // 1. Commandes directes
-  const directAction = DIRECT_COMMANDS[instruction];
+  const directAction = DIRECT_COMMANDS[directInstruction];
   if (directAction) {
     try {
       await executeDirectAction(bot, username, directAction);
@@ -98,7 +109,7 @@ async function handle(bot, username, message) {
   }
 
   // 2. Définir un coffre principal
-  if (instruction.includes('définis ce coffre comme coffre principal')) {
+  if (directInstruction.includes('definis ce coffre comme coffre principal')) {
     const pos = bot.entity.position.floored();
     memory.set('main_chest', { x: pos.x, y: pos.y, z: pos.z });
     bot.chat('Coffre principal enregistré.');
@@ -106,7 +117,7 @@ async function handle(bot, username, message) {
   }
 
   // 3. Définir la base
-  if (instruction.includes('définis cet endroit comme base')) {
+  if (directInstruction.includes('definis cet endroit comme base')) {
     const pos = bot.entity.position.floored();
     memory.set('base', { x: pos.x, y: pos.y, z: pos.z });
     bot.chat('Base enregistrée.');
@@ -119,7 +130,8 @@ async function handle(bot, username, message) {
   const goal = await askLLM(instruction, state);
 
   if (!goal) {
-    bot.chat('Je n\'ai pas compris la demande.');
+    const llmError = getLastLLMError();
+    bot.chat(llmError ? 'Erreur IA : ' + llmError : "Je n'ai pas compris la demande.");
     return;
   }
 
@@ -131,7 +143,7 @@ async function handle(bot, username, message) {
   }
 
   // 6. Envoyer au planner de survie
-  await survivalPlanner.plan(bot, goal);
+  await survivalPlanner.plan(bot, goal, username);
 }
 
 /**

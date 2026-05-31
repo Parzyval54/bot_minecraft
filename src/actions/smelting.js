@@ -32,25 +32,28 @@ async function smeltItem(bot, itemName, count, fuelName = 'coal') {
 
   const furnace = await bot.openFurnace(furnaceBlock);
 
-  const inputItem = bot.inventory.findInventoryItem(
-    mcData.itemsByName[itemName]?.id, null
-  );
-  const fuelItem = bot.inventory.findInventoryItem(
-    mcData.itemsByName[fuelName]?.id, null
-  );
+  try {
+    const inputItem = bot.inventory.findInventoryItem(
+      mcData.itemsByName[itemName]?.id, null
+    );
+    const fuelItem = bot.inventory.findInventoryItem(
+      mcData.itemsByName[fuelName]?.id, null
+    );
 
-  if (!inputItem) { bot.chat(`Pas de ${itemName} dans l'inventaire.`); furnace.close(); return false; }
-  if (!fuelItem) { bot.chat(`Pas de ${fuelName} pour alimenter le four.`); furnace.close(); return false; }
+    if (!inputItem) { bot.chat(`Pas de ${itemName} dans l'inventaire.`); return false; }
+    if (!fuelItem) { bot.chat(`Pas de ${fuelName} pour alimenter le four.`); return false; }
 
-  await furnace.putInput(inputItem.type, null, count);
-  await furnace.putFuel(fuelItem.type, null, Math.ceil(count / 8));
+    await furnace.putInput(inputItem.type, null, count);
+    await furnace.putFuel(fuelItem.type, null, Math.ceil(count / 8));
 
-  // Attendre la fin de la fusion (simplifié)
-  await new Promise((resolve) => setTimeout(resolve, count * 10000));
+    // Attendre la fin de la fusion (simplifié)
+    await new Promise((resolve) => setTimeout(resolve, count * 10000));
 
-  await furnace.takeOutput();
-  furnace.close();
-  return true;
+    await furnace.takeOutput();
+    return true;
+  } finally {
+    furnace.close();
+  }
 }
 
 module.exports = { smeltItem };

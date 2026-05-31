@@ -17,6 +17,7 @@ const ALLOWED_GOALS = [
   'deposit_items',
   'withdraw_items',
   'collect_nearby_items',
+  'drop_items',
   'check_health',
   'eat_food',
   'find_food',
@@ -40,6 +41,51 @@ const ALLOWED_GOALS = [
   'report_status'
 ];
 
+const RESOURCE_GOALS = new Set([
+  'find_resource',
+  'collect_resource',
+  'mine_block',
+  'chop_tree',
+  'dig_block'
+]);
+
+const ALLOWED_RESOURCES = new Set([
+  'oak_log',
+  'birch_log',
+  'spruce_log',
+  'cobblestone',
+  'stone',
+  'coal',
+  'sand',
+  'gravel',
+  'iron_ore',
+  'wool'
+]);
+
+const CRAFT_GOALS = new Set([
+  'craft_item',
+  'craft_tool'
+]);
+
+const ALLOWED_CRAFT_ITEMS = new Set([
+  'oak_planks',
+  'birch_planks',
+  'spruce_planks',
+  'stick',
+  'crafting_table',
+  'wooden_pickaxe',
+  'stone_pickaxe',
+  'wooden_axe',
+  'stone_axe',
+  'torch',
+  'oak_door',
+  'birch_door',
+  'spruce_door',
+  'furnace',
+  'glass',
+  'glass_pane'
+]);
+
 const ALLOWED_BLUEPRINTS = [
   'starter_house',
   'wood_house',
@@ -54,7 +100,7 @@ const ALLOWED_BLUEPRINTS = [
  * @param {Object} goal - Objet JSON à valider
  * @returns {{ ok: boolean, reason?: string }}
  */
-function validate(goal) {
+function validateGoal(goal) {
   if (!goal || typeof goal !== 'object') {
     return { ok: false, reason: 'L\'objet goal est manquant ou invalide.' };
   }
@@ -65,6 +111,18 @@ function validate(goal) {
 
   if (!ALLOWED_GOALS.includes(goal.goal)) {
     return { ok: false, reason: `But inconnu : "${goal.goal}". Action refusée.` };
+  }
+
+  if (RESOURCE_GOALS.has(goal.goal) && !ALLOWED_RESOURCES.has(goal.resource)) {
+    return { ok: false, reason: 'Ressource inconnue ou absente : "' + goal.resource + '".' };
+  }
+
+  if (CRAFT_GOALS.has(goal.goal) && !ALLOWED_CRAFT_ITEMS.has(goal.item)) {
+    return { ok: false, reason: "Item à fabriquer inconnu ou absent : " + goal.item + "." };
+  }
+
+  if (goal.count !== undefined && (!Number.isInteger(goal.count) || goal.count < 1 || goal.count > 4096)) {
+    return { ok: false, reason: 'Quantité invalide : "' + goal.count + '".' };
   }
 
   if (goal.blueprint !== undefined && !ALLOWED_BLUEPRINTS.includes(goal.blueprint)) {
@@ -80,6 +138,19 @@ function validate(goal) {
     }
   }
 
+  return { ok: true };
+}
+
+function validate(plan) {
+  if (!Array.isArray(plan?.goals)) return validateGoal(plan);
+  if (plan.goals.length < 1 || plan.goals.length > 12) {
+    return { ok: false, reason: 'Le plan doit contenir entre 1 et 12 actions.' };
+  }
+
+  for (let index = 0; index < plan.goals.length; index++) {
+    const result = validateGoal(plan.goals[index]);
+    if (!result.ok) return { ok: false, reason: "Action " + (index + 1) + " : " + result.reason };
+  }
   return { ok: true };
 }
 
